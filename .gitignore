@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 本地临时/输出
+*.tmp
+~$*.xlsx
+~$*.docx
+
+# 业务数据（不外传：原始导出表与核查结果不进仓库）
+*.xlsx
+*.xls
+*.csv
+
+# 系统
+.DS_Store
+Thumbs.db
