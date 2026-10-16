@@ -21,17 +21,30 @@ agent_created: true
 3. **写回原表**：`python scripts/write_back.py --src "<被核查表.xlsx>" --issues "<疑点清单.xlsx>"`。
 4. **交付**：用 present_files 呈现核查版原表与疑点清单，并口头汇报命中分布与需要人工确认的边界项。
 
+## 运行环境
+
+脚本只依赖 `openpyxl`，**路径无关，可直接在他人的机器上运行**。执行前先定位可用的 Python 并确认依赖：
+
+```bash
+# 1) 定位 Python：优先 WorkBuddy 托管版，其次系统 python
+PY="$HOME/.workbuddy/binaries/python/envs/default/Scripts/python.exe"   # Windows
+command -v "$PY" >/dev/null 2>&1 || PY="$(command -v python3 || command -v python)"
+
+# 2) 确认 openpyxl，缺则装（托管版用其自带 pip）
+"$PY" -c "import openpyxl" 2>/dev/null || "$PY" -m pip install openpyxl -q
+```
+
 ## 脚本
 
 ```bash
-PY="C:/Users/23713/.workbuddy/binaries/python/envs/default/Scripts/python.exe"   # 已装 openpyxl
+SK="<本技能目录>"        # 例：~/.workbuddy/skills/jackyun-goods-field-audit
 
 # 1) 抽查（默认输出到被核查表同目录，文件名自动加日期后缀）
-$PY <skill>/scripts/audit.py --src "E:/.../10-15-2货品导出.xlsx"
+"$PY" "$SK/scripts/audit.py" --src "<被核查表.xlsx>"
 
 # 2) 写回核查列（自动识别并复用已有的「核查结果 / 问题摘要」列）
-$PY <skill>/scripts/write_back.py --src "E:/.../10-15-2货品导出.xlsx" \
-                                  --issues "E:/.../10-15-2_抽查疑点清单_20261016.xlsx"
+"$PY" "$SK/scripts/write_back.py" --src "<被核查表.xlsx>" \
+                                  --issues "<疑点清单.xlsx>"
 ```
 
 - `audit.py` 参数：`--src`（必填）、`--out`（可选，输出路径）、`--sheet`（可选，工作表名）

@@ -51,6 +51,10 @@ cp -r jackyun-goods-field-audit ~/.workbuddy/skills/
 
 （Windows：复制到 `C:\Users\<用户名>\.workbuddy\skills\`）
 
+技能只依赖 `openpyxl`，**不含任何写死的本机路径**，可直接在他人机器上运行；首次执行时脚本会自检依赖。
+
+**要发给同事用？** 直接转 `吉客云抽查技能_使用说明.md` —— 里面含一句话调用语、装机两步、8 条规则速览和排错表，非技术同事照着做即可。
+
 ---
 
 ## 目录约定
