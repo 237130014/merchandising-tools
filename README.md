@@ -47,22 +47,49 @@ $PY jackyun-goods-field-audit/scripts/write_back.py \
 
 ### 方式一 · 一句话自动安装（推荐）
 
-把下面这句话直接发给 WorkBuddy，它会自己下载、装好、校验依赖：
+**不需要手动下载、解压、拷文件。** 打开 WorkBuddy 新建对话，把下面这段整句发过去，它会自己装完：
 
 ```
-帮我执行这条命令安装吉客云抽查技能，装完把输出贴给我看：
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/237130014/merchandising-tools/main/install.ps1 | iex"
+帮我装一个 WorkBuddy 技能：下载 https://github.com/237130014/merchandising-tools/archive/refs/heads/main.zip 到临时目录并解压，把里面的 jackyun-goods-field-audit 整个文件夹装到 C:\Users\%USERNAME%\.workbuddy\skills\ 下（如果已有同名文件夹，先改名备份成 .bak-时间戳），装好后确认 skills\jackyun-goods-field-audit\SKILL.md 这个文件存在、并确认 python 能 import openpyxl，最后告诉我装没装成功、要不要重启 WorkBuddy
 ```
 
-装完**完全退出 WorkBuddy 再重开**（托盘图标也要退），新建对话拖入货品表，发这句话即可：
+装完**完全退出 WorkBuddy 再重开**（托盘图标也要退），新建对话拖入货品表，发：
 
 ```
 用吉客云货品档案抽查技能检查这个表
 ```
 
-脚本做什么：下载 main 分支 ZIP → 定位 `jackyun-goods-field-audit` → 备份旧版（`.bak-时间戳`）→ 复制到 `~/.workbuddy/skills/` → 校验 `SKILL.md` 层级 → 检测并补装 `openpyxl` → 清理临时文件。
+> 为什么不用 `irm ... | iex` 那种一行安装：WorkBuddy 的安全策略会拦截 `iex`（执行任意远程代码）。上面这句走的是「下载 + 解压 + 复制文件」，不执行任何下载来的代码，能力上等价且能通过校验。
 
-### 方式二 · 手动下载
+### 方式二 · 自己在终端跑脚本
+
+仓库根目录有 `install.ps1`，走到位、校验层级、补装 `openpyxl` 都由它完成：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/237130014/merchandising-tools/main/install.ps1 | iex"
+```
+
+或下载后本地执行：`powershell -File install.ps1`。可用环境变量 `MT_SKILLS_DIR` 指定安装目录（默认 `~/.workbuddy/skills`）。
+
+### 方式三 · 手动下载
+
+**1. 下载**：本页右上角绿色 `Code` → `Download ZIP`。
+
+**2. 解压**，把里面的 `jackyun-goods-field-audit` **整个文件夹**拷到：
+
+```
+C:\Users\<用户名>\.workbuddy\skills\
+```
+
+放好后层级必须是 `skills\jackyun-goods-field-audit\SKILL.md`（点进去能**直接**看到 `SKILL.md`，不能多套一层同名文件夹）。`.workbuddy` 是隐藏目录，需在资源管理器「查看」里勾选「隐藏的项目」；`skills` 不存在就手动新建。
+
+**3. 完全退出 WorkBuddy 再重开**（托盘图标也要退），新建对话拖入货品表，发：
+
+```
+用吉客云货品档案抽查技能检查这个表
+```
+
+详细图文步骤 + 排错见 **[安装说明_同事版.md](安装说明_同事版.md)**。
 
 **1. 下载**：本页右上角绿色 `Code` → `Download ZIP`。
 
