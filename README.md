@@ -1,6 +1,6 @@
 # 商品部工具
 
-商品部日常**数据核对**与**信息抽查**工具的集合仓库（私有）。
+商品部日常**数据核对**与**信息抽查**工具的集合仓库（公开）。
 
 每个工具是一个独立的 WorkBuddy 技能包，放在自己同名目录下，可直接复制到 `~/.workbuddy/skills/` 安装使用。
 
@@ -15,7 +15,7 @@
 **跑法**
 
 ```bash
-PY="C:/Users/23713/.workbuddy/binaries/python/envs/default/Scripts/python.exe"   # 需 openpyxl
+PY=python   # 任意已装 openpyxl 的 Python 3 即可
 
 # 1) 抽查 → 输出疑点清单（6 个 sheet）
 $PY jackyun-goods-field-audit/scripts/audit.py --src "10-15-2货品导出.xlsx"
@@ -43,17 +43,27 @@ $PY jackyun-goods-field-audit/scripts/write_back.py \
 
 ---
 
-## 安装
+## 安装（同事看这里）
 
-```bash
-cp -r jackyun-goods-field-audit ~/.workbuddy/skills/
+**1. 下载**：本页右上角绿色 `Code` → `Download ZIP`。
+
+**2. 解压**，把里面的 `jackyun-goods-field-audit` **整个文件夹**拷到：
+
+```
+C:\Users\<用户名>\.workbuddy\skills\
 ```
 
-（Windows：复制到 `C:\Users\<用户名>\.workbuddy\skills\`）
+放好后层级必须是 `skills\jackyun-goods-field-audit\SKILL.md`（点进去能**直接**看到 `SKILL.md`，不能多套一层同名文件夹）。`.workbuddy` 是隐藏目录，需在资源管理器「查看」里勾选「隐藏的项目」；`skills` 不存在就手动新建。
 
-技能只依赖 `openpyxl`，**不含任何写死的本机路径**，可直接在他人机器上运行；首次执行时脚本会自检依赖。
+**3. 完全退出 WorkBuddy 再重开**（托盘图标也要退），新建对话拖入货品表，发：
 
-**要发给同事用？** 直接转 `吉客云抽查技能_使用说明.md` —— 里面含一句话调用语、装机两步、8 条规则速览和排错表，非技术同事照着做即可。
+```
+用吉客云货品档案抽查技能检查这个表
+```
+
+详细图文步骤 + 排错见 **[安装说明_同事版.md](安装说明_同事版.md)**。
+
+> 技能只依赖 `openpyxl`，**不含任何写死的本机路径**，可直接在他人机器上运行；首次执行时脚本会自检依赖。
 
 ---
 
