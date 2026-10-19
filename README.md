@@ -45,6 +45,25 @@ $PY jackyun-goods-field-audit/scripts/write_back.py \
 
 ## 安装（同事看这里）
 
+### 方式一 · 一句话自动安装（推荐）
+
+把下面这句话直接发给 WorkBuddy，它会自己下载、装好、校验依赖：
+
+```
+帮我执行这条命令安装吉客云抽查技能，装完把输出贴给我看：
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/237130014/merchandising-tools/main/install.ps1 | iex"
+```
+
+装完**完全退出 WorkBuddy 再重开**（托盘图标也要退），新建对话拖入货品表，发这句话即可：
+
+```
+用吉客云货品档案抽查技能检查这个表
+```
+
+脚本做什么：下载 main 分支 ZIP → 定位 `jackyun-goods-field-audit` → 备份旧版（`.bak-时间戳`）→ 复制到 `~/.workbuddy/skills/` → 校验 `SKILL.md` 层级 → 检测并补装 `openpyxl` → 清理临时文件。
+
+### 方式二 · 手动下载
+
 **1. 下载**：本页右上角绿色 `Code` → `Download ZIP`。
 
 **2. 解压**，把里面的 `jackyun-goods-field-audit` **整个文件夹**拷到：
