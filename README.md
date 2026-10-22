@@ -20,7 +20,7 @@
 ```bash
 PY=python   # 任意已装 openpyxl 的 Python 3 即可
 
-# 1) 抽查 → 输出疑点清单（6 个 sheet）
+# 1) 抽查 → 输出疑点清单（7 个 sheet）
 $PY jackyun-goods-field-audit/scripts/audit.py --src "10-15-2货品导出.xlsx"
 
 # 2) 写回核查列（自动复用已有的「核查结果 / 问题摘要」列）

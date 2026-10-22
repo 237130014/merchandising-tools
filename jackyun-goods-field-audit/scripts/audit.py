@@ -562,7 +562,7 @@ def write_report(OUT, issues, stats, data, unparsed, skipped, boundary, noweight
 
 
 def main():
-    ap = argparse.ArgumentParser(description="吉客云货品档案 · 字段信息抽查引擎 v1.0")
+    ap = argparse.ArgumentParser(description="吉客云货品档案 · 字段信息抽查引擎 v1.1")
     ap.add_argument("--src", required=True, help="被核查的货品导出表 (.xlsx)")
     ap.add_argument("--out", default=None, help="输出的疑点清单 (.xlsx)，默认同目录自动命名")
     ap.add_argument("--sheet", default=None, help="工作表名，默认取第一个 sheet")

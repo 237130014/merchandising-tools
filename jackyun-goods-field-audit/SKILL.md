@@ -20,7 +20,7 @@ agent_created: true
 ## 工作流
 
 1. **确认输入表**：读取表头，确认含 条码 / 规格 / 货品编号 / 货品名称 / 成分 / 银重(规) / 工费价格(规) / 字印要求(规) / 分类 / 抽检比例(规)。脚本按表头名自动定位列，缺失时回退到默认列序。
-2. **跑抽查引擎**：`python scripts/audit.py --src "<被核查表.xlsx>"`，输出疑点清单（6 个 sheet）。
+2. **跑抽查引擎**：`python scripts/audit.py --src "<被核查表.xlsx>"`，输出疑点清单（**7 个 sheet**）。
 3. **写回原表**：`python scripts/write_back.py --src "<被核查表.xlsx>" --issues "<疑点清单.xlsx>"`。
 4. **交付**：用 present_files 呈现核查版原表与疑点清单，并口头汇报命中分布与需要人工确认的边界项。
 
