@@ -64,6 +64,19 @@ $PY jackyun-goods-field-audit/scripts/write_back.py \
 
 > 为什么不用 `irm ... | iex` 那种一行安装：WorkBuddy 的安全策略会拦截 `iex`（执行任意远程代码）。上面这句走的是「下载 + 解压 + 复制文件」，不执行任何下载来的代码，能力上等价且能通过校验。
 
+### 已装过旧版 · 一句话原地更新
+
+**不要重复安装、不要生成第二份副本。** 发这句给 WorkBuddy：
+
+```
+把 jackyun-goods-field-audit 技能更新到最新版（已装过就原地更新，没装过才新建，不要出现第二份同名副本）：下载 https://github.com/237130014/merchandising-tools/archive/refs/heads/main.zip 到临时目录解压，用里面 jackyun-goods-field-audit 文件夹的内容覆盖 C:\Users\%USERNAME%\.workbuddy\skills\jackyun-goods-field-audit\（覆盖时拷文件夹里的内容，不要连文件夹一起拷进去，避免多套一层；不要留 .bak 备份目录），完成后确认该目录下 SKILL.md 里写着「口径版本 v1.1」、scripts\audit.py 里能搜到 CODE_PAT，最后告诉我更新了哪几个文件、要不要重启 WorkBuddy
+```
+
+**怎么确认更新成功**：更完问 WorkBuddy「我现在装的 jackyun-goods-field-audit 是什么版本」，它读 `SKILL.md` 第 9 行的「口径版本」就能答。当前最新是 **v1.1**（2026-10-22）。
+
+> ⚠️ 覆盖时有个坑：`cp -r 源目录 目标目录` 在目标已存在时会**套一层** `目标\源目录\`，旧的 `SKILL.md` 根本没被更新。必须拷**文件夹里的内容**（`cp -r 源/. 目标/`），或先删旧目录再复制。
+
+
 ### 方式二 · 自己在终端跑脚本
 
 仓库根目录有 `install.ps1`，走到位、校验层级、补装 `openpyxl` 都由它完成：
