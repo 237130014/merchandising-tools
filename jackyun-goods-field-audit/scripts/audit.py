@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""吉客云货品档案 · 字段信息抽查引擎 v1.0
+"""吉客云货品档案 · 字段信息抽查引擎 v1.1
 
-按流星 2026-10-16 封版口径实现规则 1-8：只筛疑点，不自动判错。
+按流星封版口径实现规则 1-8：只筛疑点，不自动判错。
+v1.1（2026-10-22）：规则1 属性码放宽为结构校验（不限 XL/SL，JL 等亦可）；
+                    规则2 计价商品银重禁空白/文字/区间（如 18-20），工费禁空白。
 
 用法:
     python audit.py --src "10-15-2货品导出.xlsx"
     python audit.py --src "货品导出.xlsx" --out "疑点清单.xlsx" [--sheet sheetTitle]
 
 默认输出: 与被核查表同目录、同名的 `<被核查表名>_抽查疑点清单_<YYYYMMDD>.xlsx`
-输出含 6 个 sheet: 疑点清单 / 汇总统计 / 条码形态待识别 / 天然石词表边界 /
-                 手镯无重量信息 / 规则说明
+输出含 7 个 sheet: 疑点清单 / 汇总统计 / 条码形态待识别 / 属性码未收录 /
+                 天然石词表边界 / 手镯无重量信息 / 规则说明
 """
 import argparse, collections, datetime, os, re, sys
 
@@ -48,9 +50,17 @@ def resolve_columns(header):
 
 
 # ============================ 业务常量 ============================
+# ★ 属性码不限定枚举（2026-10-22 放宽）：只要货品编号满足
+#   属性2位 + 产品代码5位 + 出条码年月4位 + 品牌代号1位 = 12 位，即视为合法。
+#   ATTR_NAME 只用于「编号属性 ↔ 分类」的中文比对；未收录的码不做该比对，
+#   仅登记到「属性码未收录」sheet，供人工补表（不算疑点）。
 ATTR_NAME = {"XL": "项链", "SL": "手链", "ES": "耳饰", "JZ": "戒指", "SZ": "手镯",
-             "DZ": "吊坠", "BC": "包材", "YL": "银礼", "GC": "金礼", "GG": "金礼"}
+             "DZ": "吊坠", "BC": "包材", "YL": "银礼", "GC": "金礼", "GG": "金礼",
+             "JL": "脚链"}
 ATTRS = set(ATTR_NAME)
+
+# 编号结构：属性2 + 产品代码5 + 出条码年月4 + 品牌代号1
+CODE_PAT = re.compile(r"^([A-Z]{2})([A-Z0-9]{5})(\d{4})([A-Z])$")
 
 # 品牌：规格【品牌】↔ 货品编号末位代号 ↔ 条码品牌标记
 BRAND_CODE = {"中央": "K", "唯一": "A", "老鳳祥": "F", "老凤祥": "F", "中国珠宝": "R",
@@ -97,6 +107,24 @@ def fmt_num(x):
     return str(int(x)) if abs(x - round(x)) < 1e-9 else str(round(x, 4))
 
 
+# ---------- 规则2 计价商品的数值字段判定 ----------
+NUM_RE = re.compile(r"^\d+(?:\.\d+)?$")
+RANGE_RE = re.compile(r"^\d+(?:\.\d+)?\s*[-~—－–至到]\s*\d+(?:\.\d+)?$")
+
+
+def check_amount(val):
+    """计价商品的『银重(规)』『工费价格(规)』判定。
+    ★ 只接受单一数字；空白、区间（18-20）、文字备注一律为疑点。
+    返回 (是否合规, 问题描述)"""
+    if not val:
+        return False, "不得空白，必须填写数字"
+    if NUM_RE.match(val):
+        return True, ""
+    if RANGE_RE.match(val):
+        return False, f"不得填写区间（{val}），必须填单一数字"
+    return False, f"不得出现文字备注（{val}），必须为纯数字"
+
+
 def spec_weight(sp):
     """规格里的重量 → (期望银重, 说明)。区间取中间值，唯一值取该值；无重量信息返回 (None, "")"""
     m = re.search(r"(\d+(?:\.\d+)?)\s*[-~—～至]\s*(\d+(?:\.\d+)?)\s*(?:g|G|克)", sp)
@@ -123,9 +151,13 @@ def prodname_of(sp):
 
 
 def parse_code(code):
-    if len(code) >= 3 and code[:2] in ATTRS:
-        return code[:2], code[-1]
-    return None, None
+    """按结构解析 12 位货品编号：属性2 + 产品代码5 + 年月4 + 品牌代号1。
+    ★ 不限定属性码枚举（XL/SL/JZ/SZ/DZ/JL/GG… 均可），结构成立即合法。
+    返回 (属性码, 品牌代号)，结构不符返回 (None, None)。"""
+    m = CODE_PAT.match(code or "")
+    if not m:
+        return None, None
+    return m.group(1), m.group(4)
 
 
 def parse_barcode(bc):
@@ -151,7 +183,8 @@ def parse_barcode(bc):
             break
     b2 = re.sub(r"[Bb][Cc]\d+$", "", b)
     m = re.fullmatch(r"\d+([A-Z]{2})\d+", b2)
-    attr = m.group(1) if (m and m.group(1) in ATTRS) else ""
+    # ★ 属性码不限枚举：两侧被数字包围的 2 位大写字母即视为属性码（JL 等新码同样适用）
+    attr = m.group(1) if m else ""
     if not attr and not mark:
         return None
     return {"mark": mark, "attr": attr, "nature": nature, "core": b}
@@ -170,6 +203,7 @@ def run(src, out=None, sheet=None):
     print(f"[i] 字段列定位: " + ", ".join(f"{k}={chr(65+v)}" for k, v in sorted(col.items(), key=lambda x: x[1])))
 
     issues, unparsed, skipped, boundary, noweight = [], [], [], [], []
+    unknown_attr = []          # 编号属性码未收录中文名 → 只登记，不算疑点
     stats = collections.Counter()
 
     for i, r in enumerate(data):
@@ -201,13 +235,16 @@ def run(src, out=None, sheet=None):
         # ---------- 规则1 四列属性与品牌一致 ----------
         if not code or len(code) != 12 or code_attr is None:
             add("规则1", "属性/品牌四列一致", "货品编号", code,
-                "应为 12 位：属性2位+代码5位+年月4位+品牌代号1位")
+                "应为 12 位：属性2位 + 产品代码5位 + 出条码年月4位 + 品牌代号1位（属性码不限 XL/SL，JL 等亦可）")
         else:
             attr_expect = code_attr
-            if cls and cls != ATTR_NAME.get(attr_expect, ""):
+            if attr_expect not in ATTR_NAME:
+                # 属性码结构合法但未收录中文名 → 不做分类比对，只登记待补
+                unknown_attr.append((rowno, bc, code, attr_expect, cls, brand))
+            elif cls and cls != ATTR_NAME[attr_expect]:
                 add("规则1", "属性/品牌四列一致", "编号属性↔分类",
                     f"编号前2位 {attr_expect} / 分类 {cls}",
-                    f"编号前2位 {attr_expect}({ATTR_NAME.get(attr_expect,'?')}) 应与分类一致")
+                    f"编号前2位 {attr_expect}({ATTR_NAME[attr_expect]}) 应与分类一致")
             if pbc is not None and pbc["attr"] and pbc["attr"] != attr_expect:
                 add("规则1", "属性/品牌四列一致", "条码属性↔编号属性",
                     f"条码含 {pbc['attr']} / 编号前2位 {attr_expect}", "两者应为同一产品属性")
@@ -228,13 +265,18 @@ def run(src, out=None, sheet=None):
                         f"条码标记 {pbc['mark']}={mk_brand} / 规格【{brand}】", "两者应为同一品牌（唯一 与 TY 视为等同）")
 
         # ---------- 规则2 成分 ↔ 银重/工费 ----------
+        # ★ 计价：银重(规) 必须有单一数字（文字备注、区间 18-20、空白均为疑点）
+        #          工费价格(规) 不得空白（区间/文字同判）
+        # ★ 一口价：整条豁免
         if cheng not in ("计价", "一口价"):
-            add("规则2", "成分与价格", "成分", cheng or "(空)", "只能为『计价』或『一口价』")
+            add("规则2", "成分与价格", "成分", cheng or "(空)", "只能为『计价』或『一口价』两种选择")
         elif cheng == "计价":
-            if not re.fullmatch(r"\d+(\.\d+)?", yin):
-                add("规则2", "成分与价格", "银重(规)", yin or "(空)", "计价商品银重必须为纯数字（不得文字/区间/空）")
-            if not re.fullmatch(r"\d+(\.\d+)?", gong):
-                add("规则2", "成分与价格", "工费价格(规)", gong or "(空)", "计价商品工费必须为纯数字（不得文字/区间/空）")
+            ok, msg = check_amount(yin)
+            if not ok:
+                add("规则2", "成分与价格", "银重(规)", yin or "(空)", "计价商品银重" + msg)
+            ok, msg = check_amount(gong)
+            if not ok:
+                add("规则2", "成分与价格", "工费价格(规)", gong or "(空)", "计价商品工费" + msg)
 
         # ---------- 规则3 货品名称 ↔ 证书措辞 ----------
         lv = yin_level(sp)
@@ -333,7 +375,7 @@ def run(src, out=None, sheet=None):
                     add("规则8", "手镯银重取中间值", "银重(规)", yin or "(空)", why)
 
     write_report(out or default_out(src), issues, stats, data, unparsed, skipped,
-                 boundary, noweight)
+                 boundary, noweight, unknown_attr)
     return issues, stats
 
 
@@ -344,7 +386,7 @@ def default_out(src):
                         f"{stem}_抽查疑点清单_{datetime.date.today():%Y%m%d}.xlsx")
 
 
-def write_report(OUT, issues, stats, data, unparsed, skipped, boundary, noweight):
+def write_report(OUT, issues, stats, data, unparsed, skipped, boundary, noweight, unknown_attr):
     thin = Side(style="thin", color="D0D0D0")
     bd = Border(left=thin, right=thin, top=thin, bottom=thin)
     HFILL = PatternFill("solid", fgColor="1F3864")
@@ -390,6 +432,7 @@ def write_report(OUT, issues, stats, data, unparsed, skipped, boundary, noweight
     w2.append(["包材整行免检（属性码 BC）", len(skipped)])
     w2.append(["手镯无重量信息（规则8 跳过）", len(noweight)])
     w2.append(["条码形态无法识别", len(unparsed)])
+    w2.append(["属性码未收录中文名（不参与分类比对）", len(unknown_attr)])
     w2.column_dimensions["A"].width = 34
     w2.column_dimensions["B"].width = 14
     header(w2, 2)
@@ -403,7 +446,22 @@ def write_report(OUT, issues, stats, data, unparsed, skipped, boundary, noweight
         w3.column_dimensions[chr(64 + i)].width = wd
     header(w3, 5)
 
-    # Sheet4 天然石词表边界
+    # Sheet4 属性码未收录（编号结构合法，但属性码没有对应的中文分类名）
+    w3b = out.create_sheet("属性码未收录", 3)
+    w3b.append(["行号", "条码", "货品编号", "属性码", "分类", "规格品牌"])
+    for x in unknown_attr:
+        w3b.append(list(x))
+    for i, wd in enumerate([6, 18, 15, 9, 12, 10], start=1):
+        w3b.column_dimensions[chr(64 + i)].width = wd
+    header(w3b, 6)
+    note_r = w3b.max_row + 2
+    w3b.cell(note_r, 1).value = (
+        "说明：以下属性码在编号结构上合法（属性2位+代码5位+年月4位+品牌1位），"
+        "但未收录中文分类名，因此未做「编号属性↔分类」比对，不计入疑点。"
+        "如需纳入比对，请在 audit.py 的 ATTR_NAME 中补充「属性码: 分类中文名」。")
+    w3b.cell(note_r, 1).font = Font(italic=True, color="808080", size=9)
+
+    # Sheet5 天然石词表边界
     w4 = out.create_sheet("天然石词表边界")
     w4.append(["行号", "条码", "规格品牌", "规格（疑似含天然石但不在清单）"])
     for x in boundary:
@@ -429,10 +487,15 @@ def write_report(OUT, issues, stats, data, unparsed, skipped, boundary, noweight
     w6.append(["规则", "名称", "判定口径（命中即入疑点清单，不自动判错）", "命中条数"])
     for x in [
         ("规则1", "属性/品牌四列一致",
-         "条码属性 = 货品编号前2位 = 分类对应属性；条码品牌标记 ↔ 编号末位代号 ↔ 规格【品牌】。数字段一律不校。"
+         "货品编号结构：属性2位 + 产品代码5位 + 出条码年月4位 + 品牌代号1位 = 12 位；"
+         "属性码不限枚举（XL 项链/SL 手链/JZ 戒指/SZ 手镯/ES 耳饰/DZ 吊坠/JL 脚链/GG金礼…均可），"
+         "只要结构成立即合法；未收录中文名的属性码只登记不判错。"
+         "条码属性 = 编号前2位 = 分类对应属性；条码品牌标记 ↔ 编号末位代号 ↔ 规格【品牌】。数字段一律不校。"
          "★唯一 与 TY 视为同品牌信息，末位代号 A / T 互通、条码标记亦互通。", by_rule.get("规则1", 0)),
         ("规则2", "成分与价格",
-         "成分只能为『计价』或『一口价』；计价时 银重(规)、工费价格(规) 必须为纯数字；一口价豁免。", by_rule.get("规则2", 0)),
+         "成分只有『计价』『一口价』两种。计价商品：银重(规) 必须是单一数字 —— "
+         "空白、文字备注、区间（如 18-20）均为疑点；工费价格(规) 不得空白（区间/文字同判）。"
+         "一口价商品整条豁免。", by_rule.get("规则2", 0)),
         ("规则3", "货品名称证书措辞",
          "品牌组（中央/老凤祥/珍尚银/中国珠宝/萃华）须含『配国检证书』；"
          "非品牌组（唯一/IU/TY/周大金）不得出现『配国检证书』；规格已写『配证书』则货品名称须体现；"
